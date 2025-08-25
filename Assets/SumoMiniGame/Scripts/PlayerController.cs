@@ -13,9 +13,6 @@ public class PlayerController : MonoBehaviour
     public float dashDuration = 0.20f;
     public float dashCooldown = 1.25f;
 
-    [Header("FX")]
-    public ParticleSystem dashVfx;
-
     Rigidbody rb;
     Vector2 moveInput;
     bool canControl;
@@ -23,13 +20,17 @@ public class PlayerController : MonoBehaviour
     float dashEndTime;
     float nextDashTime;
 
-    // dışarıdan okunabilsin
     public bool IsDashing => isDashing;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        canControl = false; // round başlayana kadar kilitli
+    }
+
+    void Start()
+    {
+        // Hızlı test için kontrolü hemen aç
+        SetControlEnabled(true);
     }
 
     public void SetControlEnabled(bool enabled)
@@ -42,44 +43,51 @@ public class PlayerController : MonoBehaviour
     {
         if (!canControl) return;
 
-        // Yatay hareket (x,z)
+        // hareket
         Vector3 dir = new Vector3(moveInput.x, 0f, moveInput.y);
         if (dir.sqrMagnitude > 1e-4f)
         {
-            // Kuvvet uygulayalım
             rb.AddForce(dir.normalized * moveForce, ForceMode.Acceleration);
 
-            // Yönüne dönsün
+            // yönüne dön
             Quaternion targetRot = Quaternion.LookRotation(dir, Vector3.up);
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRot, 0.2f));
         }
 
-        // Max hız sınırı (toplam yatay hız)
-        Vector3 v = rb.linearVelocity;
-        Vector2 horizontal = new Vector2(v.x, v.z);
-        if (horizontal.magnitude > maxSpeed && !isDashing)
+        // max hız sınırı (dash değilken)
+        Vector3 v = rb.velocity;
+        Vector2 h = new Vector2(v.x, v.z);
+        if (h.magnitude > maxSpeed && !isDashing)
         {
-            Vector2 clamped = horizontal.normalized * maxSpeed;
-            rb.linearVelocity = new Vector3(clamped.x, v.y, clamped.y);
+            Vector2 clamped = h.normalized * maxSpeed;
+            rb.velocity = new Vector3(clamped.x, v.y, clamped.y);
         }
 
-        // Dash bitiş zamanı
         if (isDashing && Time.time >= dashEndTime)
             isDashing = false;
     }
 
-    // Input System callback (PlayerInput → Send Messages)
+    // --- INPUT CALLBACKS (Send Messages uyumlu) ---
+
+    // Move için iki overload: bazı sürümlerde InputValue, bazılarında direkt Vector2 gelebilir
     void OnMove(InputValue value)
     {
         moveInput = value.Get<Vector2>();
+        // Debug
+        // Debug.Log($"OnMove(InputValue): {moveInput}");
+    }
+    void OnMove(Vector2 v)
+    {
+        moveInput = v;
+        // Debug.Log($"OnMove(Vector2): {moveInput}");
     }
 
+    // Dash: hem parametreli hem parametresiz destekle
     void OnDash()
     {
         if (!canControl) return;
         if (Time.time < nextDashTime) return;
 
-        // hangi yöne dash? duruyorsa ileri yönü al
         Vector3 dir = new Vector3(moveInput.x, 0f, moveInput.y);
         if (dir.sqrMagnitude < 1e-4f)
             dir = transform.forward;
@@ -89,7 +97,9 @@ public class PlayerController : MonoBehaviour
         isDashing = true;
         dashEndTime = Time.time + dashDuration;
         nextDashTime = Time.time + dashCooldown;
-
-        if (dashVfx) dashVfx.Play();
+    }
+    void OnDash(InputValue v)
+    {
+        if (v.isPressed) OnDash();
     }
 }

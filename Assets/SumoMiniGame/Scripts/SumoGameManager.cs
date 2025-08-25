@@ -15,10 +15,17 @@ public class SumoGameManager : MonoBehaviour
 
     void Awake()
     {
-        pim = FindObjectOfType<PlayerInputManager>();
-        if (pim == null)
-            Debug.LogWarning("PlayerInputManager yok. 'Systems' objesine ekleyip Player Prefab'ı PF_Player yap.");
+    // Unity 2023.1+ için yeni API; daha eski sürümler için eskisi
+    #if UNITY_2023_1_OR_NEWER
+    pim = FindFirstObjectByType<PlayerInputManager>();
+    #else
+    pim = FindObjectOfType<PlayerInputManager>();
+    #endif
+
+    if (pim == null)
+        Debug.LogWarning("PlayerInputManager bulunamadı. 'Systems' objesine PlayerInputManager ekleyin ve Player Prefab'ı PF_Player yapın.");
     }
+
 
     void OnEnable()
     {
@@ -99,7 +106,7 @@ public class SumoGameManager : MonoBehaviour
         else go.transform.position = Vector3.up;
 
         var rb = go.GetComponent<Rigidbody>();
-        if (rb) rb.velocity = Vector3.zero;
+        if (rb) rb.linearVelocity = Vector3.zero;
     }
 
     void OnPlayerEliminated(GameObject go) { Debug.Log(go.name + " eliminated"); }
