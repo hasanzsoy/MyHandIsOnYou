@@ -97,17 +97,39 @@ public class SumoGameManager : MonoBehaviour
     }
 
     void PositionAtSpawn(GameObject go, int playerIndex)
+{
+    if (spawnPoints == null || spawnPoints.Count == 0)
     {
-        if (spawnPoints != null && spawnPoints.Count > 0)
-        {
-            var t = spawnPoints[playerIndex % spawnPoints.Count];
-            go.transform.SetPositionAndRotation(t.position, t.rotation);
-        }
-        else go.transform.position = Vector3.up;
-
-        var rb = go.GetComponent<Rigidbody>();
-        if (rb) rb.linearVelocity = Vector3.zero;
+        go.transform.position = Vector3.up * 3f; // fallback
+        return;
     }
+
+    Transform t = spawnPoints[playerIndex % spawnPoints.Count];
+
+    // Spawn Y’yi sabitle (2.5x kapsül için 3.0 iyidir)
+    Vector3 pos = t.position;
+    pos.y = 3f; // spawn noktalarının Y’sini 3.0 civarı yapmıştık
+
+    var rb = go.GetComponent<Rigidbody>();
+    if (rb != null)
+    {
+        // Fiziksel teleport (interpolate/continuous’da daha güvenli)
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.position = pos;
+        rb.rotation = t.rotation;
+
+        // Fiziğe "pozisyon değişti" de
+        Physics.SyncTransforms();
+        rb.WakeUp();
+    }
+    else
+    {
+        go.transform.SetPositionAndRotation(pos, t.rotation);
+        Physics.SyncTransforms();
+    }
+}
+
 
     void OnPlayerEliminated(GameObject go) { Debug.Log(go.name + " eliminated"); }
 
