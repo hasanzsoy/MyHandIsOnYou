@@ -12,6 +12,8 @@ public class SumoGameManager : MonoBehaviour
     private PlayerInputManager pim;
     private Dictionary<GameObject, int> scores = new Dictionary<GameObject, int>();
     private readonly List<GameObject> players = new List<GameObject>();
+    private int nextSpawnSlot = 0; // her yeni oyuncu farklı spawn'a gitsin
+
 
     void Awake()
     {
@@ -81,54 +83,94 @@ public class SumoGameManager : MonoBehaviour
 
     // -- JOIN CALLBACK --
     void OnPlayerJoined(PlayerInput input)
-    {
-        var go = input.gameObject;
-        players.Add(go);
+{
+    var go = input.gameObject;
+    players.Add(go);
 
-        int idx = input.playerIndex;
-        PositionAtSpawn(go, idx);
+    // playerIndex bazı kurulumlarda aynı gelebiliyor → slot sayacını kullan
+    int idx = nextSpawnSlot % Mathf.Max(1, spawnPoints.Count);
+    nextSpawnSlot++;
 
-        if (ringRules) ringRules.RegisterPlayer(go);
+    PositionAtSpawn(go, idx);
 
-        var pc = go.GetComponent<PlayerController>();
-        if (pc) pc.SetControlEnabled(true);
+    if (ringRules != null) ringRules.RegisterPlayer(go);
 
-        go.name = "Player_" + (idx + 1);
-    }
+    var pc = go.GetComponent<PlayerController>();
+    if (pc != null) pc.SetControlEnabled(true);
 
-    void PositionAtSpawn(GameObject go, int playerIndex)
+    go.name = $"Player_{idx + 1}";
+}
+
+
+    void PositionAtSpawn(GameObject go, int idx)
 {
     if (spawnPoints == null || spawnPoints.Count == 0)
     {
-        go.transform.position = Vector3.up * 3f; // fallback
+        go.transform.position = Vector3.up * 3f;
         return;
     }
 
-    Transform t = spawnPoints[playerIndex % spawnPoints.Count];
+    // 2.5x kapsül için uygun parametreler
+    const float spawnHeightY = 3.0f;
+    const float sepRadius    = 1.4f; // oyuncu yarıçapından büyük
+    const float stepDeg      = 30f;
+    const float baseDist     = 1.6f;
+    const int   ringCount    = 3;
 
-    // Spawn Y’yi sabitle (2.5x kapsül için 3.0 iyidir)
-    Vector3 pos = t.position;
-    pos.y = 3f; // spawn noktalarının Y’sini 3.0 civarı yapmıştık
+    Transform t = spawnPoints[idx % spawnPoints.Count];
+    Vector3 basePos = t.position; basePos.y = spawnHeightY;
+
+    Vector3 finalPos = FindFreeSpotNear(basePos, sepRadius, stepDeg, baseDist, ringCount);
+    Quaternion rot = t.rotation;
 
     var rb = go.GetComponent<Rigidbody>();
     if (rb != null)
     {
-        // Fiziksel teleport (interpolate/continuous’da daha güvenli)
-        rb.velocity = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-        rb.position = pos;
-        rb.rotation = t.rotation;
-
-        // Fiziğe "pozisyon değişti" de
+        rb.position = finalPos;
+        rb.rotation = rot;
         Physics.SyncTransforms();
         rb.WakeUp();
     }
     else
     {
-        go.transform.SetPositionAndRotation(pos, t.rotation);
+        go.transform.SetPositionAndRotation(finalPos, rot);
         Physics.SyncTransforms();
     }
 }
+
+Vector3 FindFreeSpotNear(Vector3 basePos, float radius, float stepDeg, float baseDist, int ringCount)
+{
+    if (!IsOccupiedByPlayer(basePos, radius)) return basePos;
+
+    for (int ring = 1; ring <= ringCount; ring++)
+    {
+        float r = baseDist * ring;
+        for (float ang = 0f; ang < 360f; ang += stepDeg)
+        {
+            float rad = ang * Mathf.Deg2Rad;
+            Vector3 p = basePos + new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad)) * r;
+            p.y = basePos.y;
+            if (!IsOccupiedByPlayer(p, radius)) return p;
+        }
+    }
+    return basePos;
+}
+
+bool IsOccupiedByPlayer(Vector3 pos, float radius)
+{
+    var hits = Physics.OverlapSphere(pos, radius, ~0, QueryTriggerInteraction.Ignore);
+    foreach (var h in hits)
+    {
+        var rb = h.attachedRigidbody;
+        if (rb != null && rb.GetComponent<PlayerController>() != null)
+            return true;
+    }
+    return false;
+}
+
+
 
 
     void OnPlayerEliminated(GameObject go) { Debug.Log(go.name + " eliminated"); }
