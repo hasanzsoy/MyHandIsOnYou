@@ -188,8 +188,9 @@ MonoBehaviour:
   dashVelocityChange: 16
   dashDuration: 0.25
   dashCooldown: 1.25
-  dashDrag: 0.05
-  dashGlideTime: 0.3
+  dashDrag: 0.08
+  dashGlideTime: 0.25
+  softCapDecel: 35
 --- !u!114 &7086728220897253278
 MonoBehaviour:
   m_ObjectHideFlags: 0

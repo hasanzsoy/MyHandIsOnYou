@@ -44,7 +44,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         SetControlEnabled(true);       // hızlı test
-        originalDrag = rb.drag;        // inspector'daki değeri referans al
+        originalDrag = rb.linearDamping;        // inspector'daki değeri referans al
     }
 
     public void SetControlEnabled(bool enabled)
@@ -69,7 +69,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // --- Soft speed cap (ANI KESME YOK) ---
-        Vector3 v = rb.velocity;
+        Vector3 v = rb.linearVelocity;
         Vector2 h = new Vector2(v.x, v.z);
         float hMag = h.magnitude;
 
@@ -80,7 +80,7 @@ public class PlayerController : MonoBehaviour
                 // hızı bir anda kesmek yerine maxSpeed'e doğru yumuşakça yaklaştır
                 Vector2 target = h.normalized * maxSpeed;
                 Vector2 newH = Vector2.MoveTowards(h, target, softCapDecel * Time.fixedDeltaTime);
-                rb.velocity = new Vector3(newH.x, v.y, newH.y);
+                rb.linearVelocity = new Vector3(newH.x, v.y, newH.y);
             }
         }
 
@@ -96,12 +96,12 @@ public class PlayerController : MonoBehaviour
         if (isGliding)
         {
             float t = 1f - Mathf.Clamp01((glideEndTime - Time.time) / dashGlideTime); // 0→1
-            rb.drag = Mathf.Lerp(dashDrag, originalDrag, t);
+            rb.linearDamping = Mathf.Lerp(dashDrag, originalDrag, t);
 
             if (Time.time >= glideEndTime)
             {
                 isGliding = false;
-                rb.drag = originalDrag; // tamamen eski drag'e dön
+                rb.linearDamping = originalDrag; // tamamen eski drag'e dön
             }
         }
     }
@@ -124,8 +124,8 @@ public class PlayerController : MonoBehaviour
         dir.Normalize();
 
         // geçici düşük drag → daha uzun ve akıcı kayış
-        originalDrag = rb.drag;
-        rb.drag = dashDrag;
+        originalDrag = rb.linearDamping;
+        rb.linearDamping = dashDrag;
 
         // kütleden bağımsız yatay hız takviyesi
         Vector3 add = dir * dashVelocityChange;
