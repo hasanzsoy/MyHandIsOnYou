@@ -15,6 +15,11 @@ public class RingRules : MonoBehaviour
     readonly List<GameObject> alive = new();
     bool roundRunning;
 
+
+    [Header("Auto")]
+    public Transform ringTransform;
+    public bool autoRadiusFromScale = true;
+
     void Start()
     {
         if (center == null)
@@ -77,6 +82,15 @@ public class RingRules : MonoBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        if (autoRadiusFromScale && ringTransform != null)
+        {
+            // Daire benzeri ring için: yarıçap ≈ scale.x * 0.5
+            ringRadius = ringTransform.lossyScale.x * 0.5f;
+        }
+    }
+
     // Debug için sahnede ringi çiz
     void OnDrawGizmos()
     {
@@ -96,4 +110,21 @@ public class RingRules : MonoBehaviour
             prev = next;
         }
     }
+    
+    public void ForceEliminate(GameObject p)
+{
+    OnPlayerEliminated?.Invoke(p);
+
+    // alive listesinden çıkar
+    for (int i = alive.Count - 1; i >= 0; i--)
+        if (alive[i] == p) alive.RemoveAt(i);
+
+    // 1 veya 0 kaldıysa round'u bitir
+    if (alive.Count <= 1)
+    {
+        StopRound();
+        OnLastPlayerStanding?.Invoke();
+    }
+}
+
 }

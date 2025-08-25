@@ -33,7 +33,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.33705992, y: 1.5, z: -2.4090977}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -122,8 +122,8 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2517513051965656955}
   serializedVersion: 5
-  m_Mass: 1.5
-  m_LinearDamping: 0
+  m_Mass: 3
+  m_LinearDamping: 0.5
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
@@ -183,10 +183,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b84ef97dd3369c94ea1e4371c50473ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveForce: 35
-  maxSpeed: 10
+  moveForce: 60
+  maxSpeed: 12
   dashImpulse: 18
-  dashDuration: 0.2
+  dashDuration: 0.22
   dashCooldown: 1.25
 --- !u!114 &7086728220897253278
 MonoBehaviour:
@@ -200,6 +200,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4bb9247ff7049240897fe4fc5736094, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  basePushImpulse: 6
+  basePushImpulse: 7
   dashPushMultiplier: 2.2
-  selfRecoilFactor: 0.3
+  selfRecoilFactor: 0.25

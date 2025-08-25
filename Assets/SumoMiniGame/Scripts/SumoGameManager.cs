@@ -85,7 +85,7 @@ public class SumoGameManager : MonoBehaviour
         var go = input.gameObject;
         players.Add(go);
 
-        int idx = players.Count - 1;
+        int idx = input.playerIndex;
         PositionAtSpawn(go, idx);
 
         if (ringRules) ringRules.RegisterPlayer(go);

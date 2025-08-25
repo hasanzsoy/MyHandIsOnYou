@@ -4,10 +4,11 @@ using UnityEngine;
 [RequireComponent(typeof(Camera))]
 public class GroupCamera : MonoBehaviour
 {
-    public float minHeight = 12f;
-    public float maxHeight = 24f;
-    public float padding = 5f;
-    public float lerpSpeed = 4f;
+    public float backOffset = 12f;
+    public float minHeight = 20f;
+    public float maxHeight = 38f;
+    public float padding = 8f;
+    public float lerpSpeed = 5f;
 
     Camera cam;
     readonly List<Transform> targets = new();
@@ -46,9 +47,9 @@ public class GroupCamera : MonoBehaviour
 
         // Yüksekliği size'a göre ayarla
         float targetHeight = Mathf.Lerp(minHeight, maxHeight, Mathf.InverseLerp(5f, 25f, size));
-        Vector3 desiredPos = new Vector3(center.x, targetHeight, center.z - 2f); // hafif eğik
+        Vector3 desiredPos = new Vector3(center.x, targetHeight, center.z - backOffset);
 
         transform.position = Vector3.Lerp(transform.position, desiredPos, Time.deltaTime * lerpSpeed);
-        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(65f, 0f, 0f), Time.deltaTime * lerpSpeed);
+        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(50f, 0f, 0f), Time.deltaTime * lerpSpeed);
     }
 }
