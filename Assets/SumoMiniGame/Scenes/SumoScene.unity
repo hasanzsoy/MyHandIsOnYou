@@ -788,6 +788,7 @@ GameObject:
   m_Component:
   - component: {fileID: 912849235}
   - component: {fileID: 912849234}
+  - component: {fileID: 912849236}
   m_Layer: 0
   m_Name: Systems
   m_TagString: Untagged
@@ -810,7 +811,7 @@ MonoBehaviour:
   m_NotificationBehavior: 0
   m_MaxPlayerCount: 4
   m_AllowJoining: 1
-  m_JoinBehavior: 0
+  m_JoinBehavior: 2
   m_PlayerJoinedEvent:
     m_PersistentCalls:
       m_Calls: []
@@ -854,6 +855,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &912849236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 912849233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d177b78f18daeaf46ab0278fbe76ad26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pim: {fileID: 912849234}
+  autoSpawnTwo: 1
 --- !u!1 &1054336598
 GameObject:
   m_ObjectHideFlags: 0
@@ -1088,7 +1103,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ringRules: {fileID: 2025600387}
   spawnPoints:
-  - {fileID: 1663585284}
+  - {fileID: 865665640}
+  - {fileID: 309337215}
+  - {fileID: 1150903584}
+  - {fileID: 434007453}
 --- !u!4 &1206890222
 Transform:
   m_ObjectHideFlags: 0
