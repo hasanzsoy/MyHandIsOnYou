@@ -9,14 +9,18 @@ public class PlayerController : MonoBehaviour
     public float maxSpeed = 12f;     // normal koşu üst sınırı
 
     [Header("Dash")]
-    [Tooltip("Dash anında HIZA eklenecek yatay hız (kütleden bağımsız)")]
-    public float dashVelocityChange = 16f;   // 14–20 aralığı ideal
-    public float dashDuration = 0.25f;       // dash “boost” süresi
+    [Tooltip("Dash anında eklenecek yatay hız (kütleden bağımsız)")]
+    public float dashVelocityChange = 18f;   // 16–20 aralığı iyi
+    public float dashDuration = 0.25f;       // boost süresi
     public float dashCooldown = 1.25f;       // tekrar süresi
-    [Tooltip("Dash ve glide sırasında geçici drag")]
-    public float dashDrag = 0.05f;           // düşük olursa daha çok kayar
-    [Tooltip("Dash bittikten sonra kısa bir kayma penceresi")]
-    public float dashGlideTime = 0.30f;      // 0.25–0.40 arası hoş
+    [Tooltip("Dash ve glide başında geçici düşük drag")]
+    public float dashDrag = 0.04f;           // 0.03–0.06 arası
+    [Tooltip("Dash bitince kısa kayma penceresi")]
+    public float dashGlideTime = 0.35f;      // 0.30–0.45 arası
+
+    [Header("Smoothing")]
+    [Tooltip("Hız maxSpeed'i aştığında saniyedeki yumuşak fren miktarı")]
+    public float softCapDecel = 25f;         // ne kadar yüksek, o kadar hızlı yavaşlar
 
     Rigidbody rb;
     Vector2 moveInput;
@@ -26,7 +30,7 @@ public class PlayerController : MonoBehaviour
     float dashEndTime;
     float nextDashTime;
 
-    bool isGliding;          // dash sonrası kayma penceresi
+    bool isGliding;
     float glideEndTime;
     float originalDrag;
 
@@ -39,9 +43,8 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
-        // Sahne başında kontrol açık kalsın (hızlı test için)
-        SetControlEnabled(true);
-        originalDrag = rb.drag;
+        SetControlEnabled(true);       // hızlı test
+        originalDrag = rb.drag;        // inspector'daki değeri referans al
     }
 
     public void SetControlEnabled(bool enabled)
@@ -65,33 +68,45 @@ public class PlayerController : MonoBehaviour
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRot, 0.2f));
         }
 
-        // --- Hız sınırlama (dash/glide dışında) ---
+        // --- Soft speed cap (ANI KESME YOK) ---
         Vector3 v = rb.velocity;
         Vector2 h = new Vector2(v.x, v.z);
-        if (h.magnitude > maxSpeed && !isDashing && !isGliding)
+        float hMag = h.magnitude;
+
+        if (!isDashing) // dash sırasında hiç sınırlama yok
         {
-            Vector2 clamped = h.normalized * maxSpeed;
-            rb.velocity = new Vector3(clamped.x, v.y, clamped.y);
+            if (hMag > maxSpeed)
+            {
+                // hızı bir anda kesmek yerine maxSpeed'e doğru yumuşakça yaklaştır
+                Vector2 target = h.normalized * maxSpeed;
+                Vector2 newH = Vector2.MoveTowards(h, target, softCapDecel * Time.fixedDeltaTime);
+                rb.velocity = new Vector3(newH.x, v.y, newH.y);
+            }
         }
 
-        // --- Dash & glide zamanlaması ---
+        // --- Dash & Glide zamanlaması + drag'in kademeli geri dönüşü ---
         if (isDashing && Time.time >= dashEndTime)
         {
             isDashing = false;
             isGliding = true;
             glideEndTime = Time.time + dashGlideTime;
-            // drag'ı glide bitene kadar düşük tut
+            // glide boyunca drag'i yavaşça yükselteceğiz
         }
 
-        if (isGliding && Time.time >= glideEndTime)
+        if (isGliding)
         {
-            isGliding = false;
-            rb.drag = originalDrag; // drag'ı normale döndür
+            float t = 1f - Mathf.Clamp01((glideEndTime - Time.time) / dashGlideTime); // 0→1
+            rb.drag = Mathf.Lerp(dashDrag, originalDrag, t);
+
+            if (Time.time >= glideEndTime)
+            {
+                isGliding = false;
+                rb.drag = originalDrag; // tamamen eski drag'e dön
+            }
         }
     }
 
     // --- INPUT CALLBACKS ---
-
     void OnMove(InputValue value) => moveInput = value.Get<Vector2>();
     void OnMove(Vector2 v)        => moveInput = v;
 
@@ -103,16 +118,16 @@ public class PlayerController : MonoBehaviour
         if (!canControl) return;
         if (Time.time < nextDashTime) return;
 
-        // Yön yoksa ileri bakış yönüne dash
+        // Yön yoksa ileri bak
         Vector3 dir = new Vector3(moveInput.x, 0f, moveInput.y);
         if (dir.sqrMagnitude < 1e-4f) dir = transform.forward;
         dir.Normalize();
 
-        // Geçici düşük drag → daha uzun kayma
+        // geçici düşük drag → daha uzun ve akıcı kayış
         originalDrag = rb.drag;
         rb.drag = dashDrag;
 
-        // KÜTLEDEN BAĞIMSIZ hız takviyesi (yalnızca yatay düzlemde)
+        // kütleden bağımsız yatay hız takviyesi
         Vector3 add = dir * dashVelocityChange;
         rb.AddForce(add, ForceMode.VelocityChange);
 

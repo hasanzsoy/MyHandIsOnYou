@@ -185,9 +185,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveForce: 60
   maxSpeed: 12
-  dashImpulse: 18
-  dashDuration: 0.22
+  dashVelocityChange: 16
+  dashDuration: 0.25
   dashCooldown: 1.25
+  dashDrag: 0.05
+  dashGlideTime: 0.3
 --- !u!114 &7086728220897253278
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -200,6 +202,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4bb9247ff7049240897fe4fc5736094, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  basePushImpulse: 7
+  basePushImpulse: 12
   dashPushMultiplier: 2.2
   selfRecoilFactor: 0.25
