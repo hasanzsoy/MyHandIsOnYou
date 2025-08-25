@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8332271541849297871}
   - component: {fileID: 3971130332070901018}
   - component: {fileID: 2727449091604684542}
-  - component: {fileID: 6740179664102766271}
+  - component: {fileID: 1910751628926162234}
   - component: {fileID: 7086728220897253278}
   m_Layer: 6
   m_Name: Player
@@ -171,7 +171,7 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &6740179664102766271
+--- !u!114 &1910751628926162234
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -188,7 +188,6 @@ MonoBehaviour:
   dashImpulse: 18
   dashDuration: 0.2
   dashCooldown: 1.25
-  dashVfx: {fileID: 0}
 --- !u!114 &7086728220897253278
 MonoBehaviour:
   m_ObjectHideFlags: 0

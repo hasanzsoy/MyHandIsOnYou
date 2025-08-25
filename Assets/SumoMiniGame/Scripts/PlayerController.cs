@@ -55,12 +55,12 @@ public class PlayerController : MonoBehaviour
         }
 
         // max hız sınırı (dash değilken)
-        Vector3 v = rb.velocity;
+        Vector3 v = rb.linearVelocity;
         Vector2 h = new Vector2(v.x, v.z);
         if (h.magnitude > maxSpeed && !isDashing)
         {
             Vector2 clamped = h.normalized * maxSpeed;
-            rb.velocity = new Vector3(clamped.x, v.y, clamped.y);
+            rb.linearVelocity = new Vector3(clamped.x, v.y, clamped.y);
         }
 
         if (isDashing && Time.time >= dashEndTime)
