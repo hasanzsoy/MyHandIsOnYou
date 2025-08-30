@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 2727449091604684542}
   - component: {fileID: 1910751628926162234}
   - component: {fileID: 7086728220897253278}
+  - component: {fileID: 1044072450654825759}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -206,3 +207,16 @@ MonoBehaviour:
   basePushImpulse: 12
   dashPushMultiplier: 2.2
   selfRecoilFactor: 0.25
+--- !u!114 &1044072450654825759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2517513051965656955}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b061f11d4eb41a4da8d092b25c3610a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  renderersToTint: []
