@@ -185,35 +185,71 @@ public class SumoGameManager : MonoBehaviour
 
     public void RestartRound()
     {
-        // Tüm oyuncuları respawn + freeze
+        // (Varsa) sahnedeki oyuncuları yeniden topla / eksikse üret
+       
+
         for (int i = 0; i < players.Count; i++)
         {
             var p = players[i];
             if (p == null) continue;
 
-            if (!p.activeSelf) p.SetActive(true);
-
-            p.GetComponent<PlayerController>()?.SetControlEnabled(false);
-            PositionAtSpawn(p, i);
-            ApplySpawnProtection(p);
-
+            var pc = p.GetComponent<PlayerController>();
             var rb = p.GetComponent<Rigidbody>();
+
+            bool wasInactive = !p.activeSelf;
+
+            // 1) OYUNCU AKTİF DEĞİLKEN konumlandır (trigger tetiklemesin)
+            PositionAtSpawn_TransformOnly(p, i);   // ↓ yeni helper
             if (rb)
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
+
+            // 2) Spawn korumasını ver (kill zone'lar saygı duysun)
+            ApplySpawnProtection(p);               // PlayerState varsa koruma süresi set edilir
+
+            // 3) Şimdi aktif et
+            if (wasInactive) p.SetActive(true);
+
+            // 4) Round başlayana kadar kontrol kapalı
+            if (pc) pc.SetControlEnabled(false);
+
+            // 5) Ring'e kaydet (artık aktif)
+            ringRules?.RegisterPlayer(p);
         }
 
         StopAllCoroutines();
-        StartCoroutine(CoRestartDelay());
+        // StartCoroutine(CoRestartDelay()); // → StartRound() → countdown → kontroller açılır
     }
 
-    IEnumerator CoRestartDelay()
+void PositionAtSpawn_TransformOnly(GameObject go, int idx)
+{
+    if (spawnPoints == null || spawnPoints.Count == 0)
     {
-        yield return new WaitForSecondsRealtime(0.1f);
-        StartRound();
+        go.transform.SetPositionAndRotation(new Vector3(0f, 3f, 0f), Quaternion.identity);
+        Physics.SyncTransforms();
+        return;
     }
+
+    const float spawnHeightY = 3.0f;
+    const float sepRadius    = 1.4f;
+    const float stepDeg      = 30f;
+    const float baseDist     = 1.6f;
+    const int   ringCount    = 3;
+
+    Transform t = spawnPoints[idx % spawnPoints.Count];
+    Vector3 basePos = t.position; basePos.y = spawnHeightY;
+
+    Vector3 finalPos = FindFreeSpotNear(basePos, sepRadius, stepDeg, baseDist, ringCount);
+    Quaternion rot   = t.rotation;
+
+    // Rigidbody'ye dokunmadan direkt transform'u taşırız
+    go.transform.SetPositionAndRotation(finalPos, rot);
+    Physics.SyncTransforms();
+}
+
+
 
     // ------------------- JOIN & SPAWN -------------------
     void OnPlayerJoined(PlayerInput input)

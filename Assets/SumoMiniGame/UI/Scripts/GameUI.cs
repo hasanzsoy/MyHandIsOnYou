@@ -7,7 +7,7 @@ public class GameUI : MonoBehaviour
 {
     [Header("Refs")]
     public SumoGameManager game;        // Inspector’dan atayacaksın
-    public RingRules ringRules;         // Inspector’dan atayacaksın
+    public RingRules ringRules;         // Sadece toast için opsiyonel
     public TextMeshProUGUI countdownText;
     public TextMeshProUGUI timerText;
     public GameObject roundEndPanel;
@@ -16,8 +16,12 @@ public class GameUI : MonoBehaviour
 
     [Header("Score UI")]
     public List<ScoreItemView> scoreItems = new List<ScoreItemView>();
-    public Color p1Color = new Color(0.20f,0.75f,1f); // mavi
-    public Color p2Color = new Color(1f,0.35f,0.35f); // kırmızı
+    public Color p1Color = new Color(0.20f, 0.75f, 1f); // fallback mavi
+    public Color p2Color = new Color(1f, 0.35f, 0.35f); // fallback kırmızı
+
+    [Header("Options")]
+    [Tooltip("Sadece bilgilendirme: oyuncu elenince küçük toast göster.")]
+    public bool listenRingElimsForToast = true;
 
     float roundTimer;
     bool timerRunning;
@@ -27,35 +31,35 @@ public class GameUI : MonoBehaviour
         if (countdownText) countdownText.text = "";
         if (timerText) timerText.text = "";
         if (roundEndPanel) roundEndPanel.SetActive(false);
-        if (toastText) { var c = toastText.color; c.a = 0f; toastText.color = c; }
+        if (toastText)
+        {
+            var c = toastText.color; c.a = 0f; toastText.color = c;
+        }
     }
 
     void OnEnable()
     {
-        if (ringRules != null)
-        {
-            ringRules.OnPlayerEliminated += OnPlayerEliminated;
-            ringRules.OnLastPlayerStanding += OnLastPlayerStanding;
-        }
+        // Round akışını SADECE GameManager'dan dinle
         if (game != null)
         {
             game.OnRoundBegin += OnRoundBegin;
             game.OnScoreChanged += OnScoreChanged;
         }
+
+        // RingRules: Sadece ELENME için toast (round end dinlenmez!)
+        if (ringRules != null && listenRingElimsForToast)
+            ringRules.OnPlayerEliminated += HandlePlayerEliminatedToast;
     }
 
     void OnDisable()
     {
-        if (ringRules != null)
-        {
-            ringRules.OnPlayerEliminated -= OnPlayerEliminated;
-            ringRules.OnLastPlayerStanding -= OnLastPlayerStanding;
-        }
         if (game != null)
         {
             game.OnRoundBegin -= OnRoundBegin;
             game.OnScoreChanged -= OnScoreChanged;
         }
+        if (ringRules != null && listenRingElimsForToast)
+            ringRules.OnPlayerEliminated -= HandlePlayerEliminatedToast;
     }
 
     void Update()
@@ -63,18 +67,11 @@ public class GameUI : MonoBehaviour
         if (timerRunning)
         {
             roundTimer += Time.deltaTime;
-            if (timerText) timerText.text = FormatTime(roundTimer);
+            if (timerText) timerText.text = $"{(int)(roundTimer/60):00}:{(int)(roundTimer%60):00}";
         }
     }
 
-    string FormatTime(float t)
-    {
-        int m = Mathf.FloorToInt(t / 60f);
-        int s = Mathf.FloorToInt(t % 60f);
-        return $"{m:00}:{s:00}";
-    }
-
-    // --- Public API: GameManager çağıracak ---
+    // -------- Public API (GameManager çağırır) --------
     public void InitScores(IReadOnlyList<GameObject> players)
     {
         for (int i = 0; i < scoreItems.Count; i++)
@@ -83,59 +80,58 @@ public class GameUI : MonoBehaviour
             scoreItems[i].gameObject.SetActive(has);
             if (has)
             {
-                scoreItems[i].SetName($"P{i+1}");
-                scoreItems[i].SetColor(i==0 ? p1Color : p2Color);
+                scoreItems[i].SetName($"P{i + 1}");
+
+                // Renk: önce GameManager.playerColors, yoksa p1/p2 fallback
+                Color col = (game != null && game.playerColors != null && game.playerColors.Length > 0)
+                    ? game.playerColors[i % game.playerColors.Length]
+                    : (i == 0 ? p1Color : p2Color);
+                scoreItems[i].SetColor(col);
+
                 scoreItems[i].SetScore(game != null ? game.GetScore(players[i]) : 0);
             }
         }
     }
 
+    public void UpdateScore(GameObject player, int newScore)
+    {
+        if (game == null || player == null) return;
+        int idx = game.IndexOfPlayer(player);
+        if (0 <= idx && idx < scoreItems.Count) scoreItems[idx].SetScore(newScore);
+    }
+
+    public void UpdateScore(int playerIndex, int newScore)
+    {
+        if (0 <= playerIndex && playerIndex < scoreItems.Count)
+            scoreItems[playerIndex].SetScore(newScore);
+    }
+
     public void ShowCountdown(float prep = 0.8f, int count = 3)
     {
         StopAllCoroutines();
-        StartCoroutine(CoCountdown(prep, count));
+        StartCoroutine(CoCountdownRealtime(prep, count));
     }
 
-    IEnumerator CoCountdown(float prep, int count)
+    IEnumerator CoCountdownRealtime(float prep, int count)
     {
         timerRunning = false;
+        roundTimer = 0f;
+
         if (countdownText) countdownText.text = "";
-        yield return new WaitForSeconds(prep);
+        yield return new WaitForSecondsRealtime(prep);
 
         for (int i = count; i >= 1; i--)
         {
             if (countdownText) countdownText.text = i.ToString();
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSecondsRealtime(1f);
         }
+
         if (countdownText) countdownText.text = "GO!";
-        yield return new WaitForSeconds(0.6f);
+        yield return new WaitForSecondsRealtime(0.6f);
         if (countdownText) countdownText.text = "";
 
-        roundTimer = 0f;
         timerRunning = true;
     }
-
-    // Kazananın skorunu doğrudan güncellemek için (SumoGameManager fallback bunu çağırıyor)
-public void UpdateScore(GameObject player, int newScore)
-{
-    if (game == null || player == null || scoreItems == null) return;
-    int idx = game.IndexOfPlayer(player);
-    if (idx >= 0 && idx < scoreItems.Count)
-    {
-        scoreItems[idx].SetScore(newScore);
-    }
-}
-
-// İstersen index ile de çağırabilmek için küçük yardımcı
-public void UpdateScore(int playerIndex, int newScore)
-{
-    if (scoreItems == null) return;
-    if (playerIndex >= 0 && playerIndex < scoreItems.Count)
-    {
-        scoreItems[playerIndex].SetScore(newScore);
-    }
-}
-
 
     public void ShowRoundEnd(string label = "ROUND WON!")
     {
@@ -147,62 +143,55 @@ public void UpdateScore(int playerIndex, int newScore)
 
     IEnumerator CoHideRoundEnd(float t)
     {
-        yield return new WaitForSeconds(t);
+        yield return new WaitForSecondsRealtime(t);
         if (roundEndPanel) roundEndPanel.SetActive(false);
     }
 
     public void ShowToast(string msg, float showTime = 1.2f)
     {
         if (toastText == null) return;
-        StopCoroutine("CoToast");
+        StopCoroutine(nameof(CoToast));
         StartCoroutine(CoToast(msg, showTime));
     }
 
     IEnumerator CoToast(string msg, float showTime)
     {
         toastText.text = msg;
+
         // fade in
-        for (float a = 0; a < 1f; a += Time.deltaTime * 6f)
+        for (float a = 0; a < 1f; a += Time.unscaledDeltaTime * 6f)
         {
             var c = toastText.color; c.a = Mathf.Clamp01(a); toastText.color = c;
             yield return null;
         }
+
         // hold
-        yield return new WaitForSeconds(showTime);
+        yield return new WaitForSecondsRealtime(showTime);
+
         // fade out
-        for (float a = 1f; a > 0f; a -= Time.deltaTime * 3f)
+        for (float a = 1; a > 0f; a -= Time.unscaledDeltaTime * 3f)
         {
             var c = toastText.color; c.a = Mathf.Clamp01(a); toastText.color = c;
             yield return null;
         }
+
         var c2 = toastText.color; c2.a = 0f; toastText.color = c2;
     }
 
-    // ---- Event handlers ----
+    // -------- Event handlers --------
     void OnRoundBegin()
     {
-        ShowCountdown(0.8f, 3);
         if (roundEndPanel) roundEndPanel.SetActive(false);
+        ShowCountdown(0.8f, 3);
     }
 
-    void OnPlayerEliminated(GameObject p)
+    void OnScoreChanged(GameObject p, int newScore) => UpdateScore(p, newScore);
+
+    // Sadece toast için (round end UI’sini GameManager açacak!)
+    void HandlePlayerEliminatedToast(GameObject p)
     {
-        // Hangi oyuncu düştü?
-        if (game == null) return;
+        if (game == null || p == null) return;
         int idx = game.IndexOfPlayer(p);
-        if (idx >= 0) ShowToast($"P{idx+1} suya düştü!");
-    }
-
-    void OnLastPlayerStanding()
-    {
-        ShowRoundEnd("ROUND WON!");
-    }
-
-    void OnScoreChanged(GameObject p, int newScore)
-    {
-        if (game == null) return;
-        int idx = game.IndexOfPlayer(p);
-        if (idx >= 0 && idx < scoreItems.Count)
-            scoreItems[idx].SetScore(newScore);
+        if (idx >= 0) ShowToast($"P{idx + 1} suya düştü!");
     }
 }

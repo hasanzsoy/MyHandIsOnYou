@@ -1,95 +1,139 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 public class PauseMenu : MonoBehaviour
 {
-    [Header("Refs")]
-    public GameObject panel;            // PausePanel (full screen)
-    public GameObject firstSelected;     // Açılınca seçilecek buton (örn. BtnResume)
+    [Header("UI")]
+    [Tooltip("Tam ekran pause paneli")]
+    public GameObject panel;
+
+    [Tooltip("Açılınca seçilecek ilk buton (örn. Resume)")]
+    public GameObject firstSelected;
+
+    [Header("Refs (opsiyonel)")]
+    [Tooltip("Inspector'dan atarsan Find yapmayız; boşsa otomatik buluruz.")]
+    public SumoGameManager gameManager;
 
     bool isOpen;
-    float _prevTimeScale = 1f;
+    float prevTimeScale = 1f;
 
-    void Start()
+    void Awake()
     {
         if (panel) panel.SetActive(false);
+        ResolveGameManagerIfNeeded();
     }
 
     void Update()
     {
-        // Klavye & gamepad kısayolları
+        // ESC / Start ile aç/kapa
         if (Input.GetKeyDown(KeyCode.Escape) ||
-            Input.GetKeyDown(KeyCode.JoystickButton7) ||   // Start
-            Input.GetKeyDown(KeyCode.JoystickButton1))     // B
+            Input.GetKeyDown(KeyCode.JoystickButton7))   // Start
         {
             Toggle();
         }
     }
 
-    public void Toggle()
+    // ----- PUBLIC UI EVENTS -----
+
+    // Resume: oyuna devam
+    public void BtnResume()
     {
-        isOpen = !isOpen;
+        Resume();
+    }
 
-        if (isOpen)
+    // Restart: skorları korur, oyuncuları spawn noktalarına geri koyar
+    public void BtnRestartRound()
+    {
+        // Menüyü kapatıp zamanı normale al
+        Resume();
+
+        ResolveGameManagerIfNeeded();
+        if (gameManager != null)
         {
-            _prevTimeScale = Time.timeScale;
-            Time.timeScale = 0f;
-
-            if (panel) panel.SetActive(true);
-
-            // Farenin görünürlüğü (istersen)
-            Cursor.visible = true;
-            Cursor.lockState = CursorLockMode.None;
-
-            // UI seçim
-            if (firstSelected != null)
-                EventSystem.current?.SetSelectedGameObject(firstSelected);
+            gameManager.RestartRound();   // ⬅️ Round sıfırlar, oyuncuları yeniden spawn eder
         }
         else
         {
-            // Menü kapanınca zaman ölçeğini geri getir
-            Time.timeScale = _prevTimeScale;
-
-            if (panel) panel.SetActive(false);
-
-            // Farenin durumu (oyununa göre değiştirebilirsin)
-            // Cursor.visible = false;
-            // Cursor.lockState = CursorLockMode.Locked;
+            Debug.LogError("[PauseMenu] SumoGameManager bulunamadı! (Sahnede aktif mi?)");
         }
     }
 
-    // UI Butonları
-    public void BtnResume() { if (isOpen) Toggle(); }
-
-    public void BtnRestartRound()
-    {
-        // Round’u baştan başlat
-        var gm =
-        #if UNITY_2023_1_OR_NEWER
-            Object.FindFirstObjectByType<SumoGameManager>();
-        #else
-            Object.FindObjectOfType<SumoGameManager>();
-        #endif
-
-        if (gm) gm.RestartRound();
-        if (isOpen) Toggle();
-    }
-
+    // Quit: oyundan çık
     public void BtnQuitGame()
     {
-        // Editörde çalıştırırken de takılmamak için timeScale'i toparla
-        Time.timeScale = 1f;
+        Time.timeScale = 1f; // her ihtimale karşı toparla
+
+#if UNITY_EDITOR
+        // Editör'de play modunu durdur
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
         Application.Quit();
+#endif
+    }
+
+    // ----- TOGGLE / RESUME -----
+
+    public void Toggle()
+    {
+        if (isOpen) { Resume(); }
+        else        { Open();   }
+    }
+
+    void Open()
+    {
+        if (isOpen) return;
+        isOpen = true;
+
+        prevTimeScale = Time.timeScale;
+        Time.timeScale = 0f;
+
+        if (panel) panel.SetActive(true);
+
+        // Fare serbest (istersen proje gereğine göre kapatabilirsin)
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+
+        // UI focus
+        if (firstSelected != null)
+            EventSystem.current?.SetSelectedGameObject(firstSelected);
+    }
+
+    void Resume()
+    {
+        if (!isOpen && Mathf.Approximately(Time.timeScale, 1f))
+            return;
+
+        isOpen = false;
+
+        Time.timeScale = Mathf.Approximately(prevTimeScale, 0f) ? 1f : prevTimeScale;
+
+        if (panel) panel.SetActive(false);
+
+        // Oyuna dönerken fareni isteğine göre ayarla
+        // Cursor.visible = false;
+        // Cursor.lockState = CursorLockMode.Locked;
     }
 
     void OnDisable()
     {
-        // Oyun objesi disable olursa timeScale 0'da kalmasın
+        // Script/Objesi devre dışı kalırsa oyunu kilitli bırakma
         if (isOpen)
         {
             Time.timeScale = 1f;
             isOpen = false;
         }
+    }
+
+    // ----- HELPERS -----
+
+    void ResolveGameManagerIfNeeded()
+    {
+        if (gameManager != null) return;
+
+#if UNITY_2023_1_OR_NEWER
+        gameManager = Object.FindFirstObjectByType<SumoGameManager>();
+#else
+        gameManager = Object.FindObjectOfType<SumoGameManager>();
+#endif
     }
 }
